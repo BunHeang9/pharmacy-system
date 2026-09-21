@@ -1,0 +1,412 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ຫຼາຍສາຂາ — ຕອນນີ້ມີສາຂາດຽວ ແຕ່ອອກແບບໄວ້ລ່ວງໜ້າ
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+  batches   Batch[]
+    setting   Setting?
+      expenses  Expense[]
+
+
+  movements StockMovement[]
+  sales     Sale[]
+  purchases Purchase[]
+  prescriptions Prescription[]
+
+
+}
+// ຄ່າຕັ້ງຂອງແຕ່ລະສາຂາ — ແຖວດຽວຕໍ່ສາຂາ (1-to-1 ກັບ Branch)
+model Setting {
+  id                String   @id @default(cuid())
+  branchId          String   @unique
+  branch            Branch   @relation(fields: [branchId], references: [id])
+
+  shopName          String   @default("")
+  phone             String   @default("")
+  address           String   @default("")
+  timezone          String   @default("Asia/Vientiane")
+
+  currency          String   @default("LAK")
+  taxRate           Decimal  @default(0) @db.Decimal(5, 2)
+  invoicePrefix     String   @default("INV-")
+  receiptFooter     String   @default("")
+
+  lowStockAlert     Boolean  @default(true)
+  expiryAlert       Boolean  @default(true)
+  expiryWarningDays Int      @default(90)
+
+  updatedAt         DateTime @updatedAt
+}
+enum ExpenseCategory {
+  OWNER_DRAW
+  RENT
+  UTILITIES
+  SALARIES
+  OTHER
+}
+
+// ລາຍຈ່າຍທຸລະກິດ — ລວມທັງເງິນທີ່ເຈົ້າຂອງຮ້ານຖອນໄປໃຊ້ສ່ວນຕົວ (OWNER_DRAW) ແລະ ຄ່າໃຊ້ຈ່າຍອື່ນໆ
+// ບໍ່ມີ edit/delete — ຄືກັນກັບ SupplierPayment, ແກ້ຄວາມຜິດພາດດ້ວຍການບັນທຶກລາຍການໃໝ່ຫັກລ້າງແທນ
+model Expense {
+  id        String          @id @default(cuid())
+  category  ExpenseCategory
+  amount    Decimal         @db.Decimal(12, 2)
+  note      String?
+  branchId  String
+  branch    Branch          @relation(fields: [branchId], references: [id])
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  createdAt DateTime        @default(now())
+
+  @@index([branchId])
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PHARMACIST
+  CASHIER
+  INVENTORY_MANAGER
+  PHARMACY_CLERK
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  phone        String?
+  passwordHash String
+  role         Role      @default(CASHIER)
+  isActive     Boolean   @default(true) // ບໍ່ລຶບຜູ້ໃຊ້ — ປິດການໃຊ້ງານແທນ
+  lastLoginAt  DateTime?
+
+  branchId String?
+  branch   Branch? @relation(fields: [branchId], references: [id])
+  movements StockMovement[]
+  sales     Sale[]
+  purchases Purchase[]
+    prescriptions Prescription[]
+  supplierPayments SupplierPayment[]
+    expenses         Expense[]
+
+
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true) // ມີຢາຢູ່ → ຫ້າມລຶບ, ປິດການໃຊ້ງານແທນ
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  medicines Medicine[]
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  contact   String?
+  phone     String?
+  email     String?
+  address   String?
+  regNo     String?
+  licenseNo String?
+  balance   Decimal  @default(0) @db.Decimal(12, 2) // ຄ້າງຈ່າຍ > 0 → ຫ້າມລຶບ
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medicines Medicine[]
+  purchases Purchase[]
+  payments  SupplierPayment[]
+
+}
+
+model Medicine {
+  id                   String  @id @default(cuid())
+  name                 String
+  genericName          String
+  brand                String?
+  form                 String?
+  strength             String?
+  unit                 String?
+  barcode              String? @unique
+  sku                  String? @unique
+  manufacturer         String?
+  purchasePrice        Decimal @default(0) @db.Decimal(12, 2)
+  sellingPrice         Decimal @default(0) @db.Decimal(12, 2)
+  taxRate              Decimal @default(0) @db.Decimal(5, 2)
+  minStock             Int     @default(0)
+  prescriptionRequired Boolean @default(false)
+  isActive             Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  supplierId String?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+
+  batches    Batch[]
+  movements  StockMovement[]
+  saleItems  SaleItem[]
+  purchaseItems PurchaseItem[]
+    prescriptionItems PrescriptionItem[]
+
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ສະຕັອກແຍກຕາມ batch — ແຕ່ລະ batch ມີວັນໝົດອາຍຸຂອງມັນເອງ (ສຳລັບ FEFO)
+model Batch {
+  id         String   @id @default(cuid())
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  branchId   String
+  branch     Branch   @relation(fields: [branchId], references: [id])
+  batchNo    String
+  quantity   Int      // ຍອດຄົງເຫຼືອປັດຈຸບັນ (ຫຼັງຫັກຂາຍ/ປັບ) — ບໍ່ແມ່ນຈຳນວນຮັບເຂົ້າຄັ້ງທຳອິດ
+  expiryDate DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  movements StockMovement[]
+
+  @@index([medicineId])
+  @@index([branchId])
+}
+
+enum MovementType {
+  STOCK_IN
+  STOCK_OUT
+  SALE
+  DAMAGED
+  EXPIRED
+  LOST
+  CORRECTION
+}
+
+// audit log — ທຸກການປ່ຽນແປງສະຕັອກຕ້ອງມີເຫດຜົນ ແລະ ຜູ້ໃຊ້ (ຫ້າມແກ້/ລຶບພາຍຫຼັງ)
+model StockMovement {
+  id           String       @id @default(cuid())
+  batchId      String
+  batch        Batch        @relation(fields: [batchId], references: [id])
+  medicineId   String
+  medicine     Medicine     @relation(fields: [medicineId], references: [id])
+  branchId     String
+  branch       Branch       @relation(fields: [branchId], references: [id])
+  type         MovementType
+  quantity     Int          // delta ຂອງ batch ນີ້: ບວກ = ເພີ່ມ, ລົບ = ຫຼຸດ
+  balanceAfter Int          // ຍອດຄົງເຫຼືອຂອງ batch ນີ້ຫຼັງການເຄື່ອນໄຫວ
+  reason       String
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  createdAt    DateTime     @default(now())
+
+  @@index([medicineId])
+  @@index([batchId])
+  @@index([branchId])
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  QR
+  OTHER
+}
+
+// ໃບຂາຍໜຶ່ງໃບ — ຕົວເລກເງິນທັງໝົດຄິດຢູ່ server, ບໍ່ຮັບຄ່າຈາກ browser
+model Sale {
+  id             String        @id @default(cuid())
+  saleNo         String        @unique
+  branchId       String
+  branch         Branch        @relation(fields: [branchId], references: [id])
+  cashierId      String
+  cashier        User          @relation(fields: [cashierId], references: [id])
+  customerName   String? // ວ່າງ = Walk-in Customer — ໃຊ້ເມື່ອບໍ່ໄດ້ເລືອກ customerId (ລູກຄ້າຈອນ)
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  subtotal       Decimal       @db.Decimal(12, 2)
+  discountAmount Decimal       @default(0) @db.Decimal(12, 2)
+  taxAmount      Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod @default(CASH)
+  createdAt      DateTime      @default(now())
+
+  items SaleItem[]
+
+  @@index([branchId])
+  @@index([cashierId])
+  @@index([customerId])
+}
+
+// ລາຍການໃນໃບຂາຍ — ລາຄາເປັນ snapshot ຕອນຂາຍ, ບໍ່ອີງໃສ່ລາຄາຢາປັດຈຸບັນ (ຢາອາດປ່ຽນລາຄາພາຍຫຼັງ)
+model SaleItem {
+  id         String   @id @default(cuid())
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id])
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(12, 2)
+  lineTotal  Decimal  @db.Decimal(12, 2)
+
+  @@index([saleId])
+  @@index([medicineId])
+}
+enum PurchaseStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+// ໃບສັ່ງຊື້ຈາກຜູ້ສະໜອງ — ຍັງບໍ່ກະທົບສະຕັອກຈົນກວ່າຈະ "receive"
+model Purchase {
+  id          String         @id @default(cuid())
+  purchaseNo  String         @unique
+  supplierId  String
+  supplier    Supplier       @relation(fields: [supplierId], references: [id])
+  branchId    String
+  branch      Branch         @relation(fields: [branchId], references: [id])
+  createdById String
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  status      PurchaseStatus @default(PENDING)
+  subtotal    Decimal        @db.Decimal(12, 2)
+  total       Decimal        @db.Decimal(12, 2)
+  receivedAt  DateTime?
+  createdAt   DateTime       @default(now())
+
+  items PurchaseItem[]
+
+  @@index([supplierId])
+  @@index([branchId])
+}
+
+// ລາຍການໃນໃບສັ່ງຊື້ — batchNo/expiryDate ຢູ່ນີ້ ເພາະຕອນ receive ຈະໃຊ້ສ້າງ batch ໃໝ່
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  medicineId String
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  quantity   Int
+  unitCost   Decimal  @db.Decimal(12, 2)
+  lineTotal  Decimal  @db.Decimal(12, 2)
+  batchNo    String
+  expiryDate DateTime
+
+  @@index([purchaseId])
+  @@index([medicineId])
+}
+enum PrescriptionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+// ໃບສັ່ງຢາ — ຍັງບໍ່ກະທົບສະຕັອກຈົນກວ່າຈະ "complete" (ຈ່າຍຢາ)
+model Prescription {
+  id           String             @id @default(cuid())
+  rxNo         String             @unique
+  patientName  String
+  doctorName   String
+  branchId     String
+  branch       Branch             @relation(fields: [branchId], references: [id])
+  pharmacistId String?
+  pharmacist   User?              @relation(fields: [pharmacistId], references: [id])
+  status       PrescriptionStatus @default(PENDING)
+  notes        String?
+  createdAt    DateTime           @default(now())
+  completedAt  DateTime?
+
+  items PrescriptionItem[]
+
+  @@index([branchId])
+  @@index([pharmacistId])
+}
+
+// ລາຍການຢາໃນໃບສັ່ງຢາ
+model PrescriptionItem {
+  id                 String       @id @default(cuid())
+  prescriptionId     String
+  prescription       Prescription @relation(fields: [prescriptionId], references: [id])
+  medicineId         String
+  medicine           Medicine     @relation(fields: [medicineId], references: [id])
+  quantity           Int
+  dosageInstructions String?
+
+  @@index([prescriptionId])
+  @@index([medicineId])
+}
+// ລູກຄ້າ — POS ມີການເລືອກລູກຄ້າແລ້ວ, ປະຫວັດການຊື້ດຶງມາຈາກ sales ຈິງ
+model Customer {
+  id          String    @id @default(cuid())
+  name        String
+  phone       String?   @unique
+  discountPct Decimal   @default(0) @db.Decimal(5, 2)
+  isActive    Boolean   @default(true) // ບໍ່ລຶບລູກຄ້າ — ປິດການໃຊ້ງານແທນ
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sales Sale[]
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  DANGER
+  SUCCESS
+}
+
+// ແຈ້ງເຕືອນ — ສ້າງ/ອັບເດດແບບ upsert ຈາກສະພາບຈິງ (ສະຕັອກ, ວັນໝົດອາຍຸ, ໃບສັ່ງຢາ) ທຸກຄັ້ງທີ່ GET
+// key ຄົງທີ່ຕໍ່ໜຶ່ງເງື່ອນໄຂ (ເຊັ່ນ stock:<medicineId>) ກັນສ້າງຊ້ຳ ແລະ ຮັກສາສະຖານະ read ໄວ້
+// ຫາກເງື່ອນໄຂຫາຍໄປ (ສະຕັອກກັບຄືນປົກກະຕິ, ໃບສັ່ງຢາຖືກຈັດການແລ້ວ) row ຈະຖືກລຶບອອກ
+model Notification {
+  id        String           @id @default(cuid())
+  key       String           @unique
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+}
+
+// ການຈ່າຍເງິນໃຫ້ຜູ້ສະໜອງ — ຫັກອອກຈາກ Supplier.balance, ບໍ່ຜູກກັບ PO ໃດໜຶ່ງໂດຍສະເພາະ
+// (ຄືກັນກັບ balance ທີ່ເປັນຍອດລວມ, ບໍ່ແມ່ນຕໍ່ໃບ)
+model SupplierPayment {
+  id         String   @id @default(cuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  amount     Decimal  @db.Decimal(12, 2)
+  note       String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([supplierId])
+}
+
+

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="lo">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+  (function () {
+    try {
+      var t = localStorage.getItem('theme')
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      if (t === 'dark') document.documentElement.classList.add('dark')
+    } catch (e) {}
+  })()
+  </script>
+
+    <title>RxPharm — Pharmacy Management System</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

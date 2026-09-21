@@ -3,6 +3,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { Package, AlertTriangle, XCircle, ArrowUpDown } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
+import { useAuth } from '@/stores/auth'
 import { useToast } from '@/stores/toast'
 import { apiErrorMessage } from '@/lib/apiError'
 import { formatMoney } from '@/utils/money'
@@ -37,6 +38,10 @@ interface Medicine {
 
 const { t } = useI18n()
 const toast = useToast()
+const auth = useAuth()
+
+// Pharmacy Clerk ເບິ່ງສະຕັອກໄດ້ ແຕ່ປັບສະຕັອກບໍ່ໄດ້ — backend ກັນໄວ້ແລ້ວ, ນີ້ແມ່ນເສີມ UX
+const canAdjust = computed(() => auth.user?.role !== 'PHARMACY_CLERK')
 
 const items = ref<Medicine[]>([])
 const search = ref('')
@@ -190,11 +195,13 @@ async function applyAdjustment() {
           <TableCell><StatusBadge kind="stock" :status="m.status" /></TableCell>
           <TableCell>
             <button
+              v-if="canAdjust"
               class="flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 hover:text-blue-600 text-slate-600 dark:text-slate-300 rounded transition"
               @click="openAdjust(m)"
             >
               <ArrowUpDown class="w-3 h-3" /> {{ t('pages.inventory.adjust') }}
             </button>
+            <span v-else class="text-xs text-slate-300 dark:text-slate-600">—</span>
           </TableCell>
         </TableRow>
       </DataTable>

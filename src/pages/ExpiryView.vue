@@ -7,6 +7,7 @@ import { daysUntil, expiryStatus, daysLabel } from '@/utils/expiry'
 import { useToast } from '@/stores/toast'
 import { apiErrorMessage } from '@/lib/apiError'
 import { useNotifications } from '@/stores/notifications'
+import { useAuth } from '@/stores/auth'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import StatCard from '@/components/ui/StatCard.vue'
 import SectionCard from '@/components/ui/SectionCard.vue'
@@ -30,6 +31,11 @@ interface BatchRow {
 const { t } = useI18n()
 const toast = useToast()
 const notifications = useNotifications()
+const auth = useAuth()
+
+// Pharmacy Clerk ລຶບ batch ໝົດອາຍຸອອກບໍ່ໄດ້ — backend ກັນໄວ້ແລ້ວ, ນີ້ແມ່ນເສີມ UX
+const canRemove = computed(() => auth.user?.role !== 'PHARMACY_CLERK')
+
 const batches = ref<BatchRow[]>([])
 
 async function load() {
@@ -183,12 +189,13 @@ async function onNotify(row: Row) {
           <TableCell><StatusBadge kind="expiry" :status="e.status" /></TableCell>
           <TableCell>
             <button
-              v-if="e.status === 'Expired'"
+              v-if="e.status === 'Expired' && canRemove"
               class="px-2 py-1 text-xs bg-red-50 dark:bg-red-500/10 text-red-600 rounded hover:bg-red-100 dark:hover:bg-red-500/20 transition border border-red-100 dark:border-red-500/20"
               @click="onRemove(e)"
             >
               {{ t('pages.expiry.remove') }}
             </button>
+            <span v-else-if="e.status === 'Expired'" class="text-xs text-slate-300 dark:text-slate-600">—</span>
             <button
               v-else
               class="px-2 py-1 text-xs bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-100 dark:hover:bg-amber-500/20 transition border border-amber-100 dark:border-amber-500/20"

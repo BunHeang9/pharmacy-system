@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../prisma'
-import { requireAuth, requireRole } from "../middleware/auth";
+import { requireAuth, requireRole, NOT_CLERK } from '../middleware/auth'
 import { asyncHandler } from '../lib/asyncHandler'
 import { deductFefo } from '../lib/fefo'
 
@@ -60,6 +60,7 @@ const stockInSchema = z.object({
 // ຮັບເຂົ້າສະຕັອກໃໝ່ = ສ້າງ batch ໃໝ່ສະເໝີ (ວັນໝົດອາຍຸແຕ່ລະຄັ້ງອາດຕ່າງກັນ ຈຶ່ງບໍ່ລວມກັບ batch ເກົ່າ)
 stockRouter.post(
   '/medicines/:id/batches',
+  requireRole(...NOT_CLERK),
   asyncHandler(async (req, res) => {
     const parsed = stockInSchema.safeParse(req.body)
     if (!parsed.success) {
@@ -110,6 +111,7 @@ const movementSchema = z.object({
 // ປັບສະຕັອກລົງ (ຂາຍ, ເສຍຫາຍ, ໝົດອາຍຸ, ເສຍ) ຫຼື ແກ້ໄຂຍອດ — ທຸກຄັ້ງບັນທຶກ audit log
 stockRouter.post(
   '/stock-movements',
+  requireRole(...NOT_CLERK),
   asyncHandler(async (req, res) => {
     const parsed = movementSchema.safeParse(req.body)
     if (!parsed.success) {

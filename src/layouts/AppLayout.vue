@@ -85,6 +85,8 @@ const NAV_GROUPS = [
       { to: '/expenses', label: 'nav.expenses', icon: '💵' },
       { to: '/users', label: 'nav.users', icon: '🔐' },
       { to: '/settings', label: 'nav.settings', icon: '⚙️' },
+      { to: '/audit-log', label: 'nav.auditLog', icon: '📜' },
+
     ],
   },
 ]
@@ -92,12 +94,18 @@ const NAV_GROUPS = [
 const CLERK_HIDDEN_PATHS = ['/categories', '/suppliers', '/purchases', '/prescriptions', '/reports', '/expenses', '/users', '/settings']
 
 const visibleNavGroups = computed(() => {
-  if (auth.user?.role !== 'PHARMACY_CLERK') return NAV_GROUPS
+  const isClerk = auth.user?.role === 'PHARMACY_CLERK'
+  const isSuperAdmin = auth.user?.role === 'SUPER_ADMIN'
   return NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !CLERK_HIDDEN_PATHS.includes(item.to)),
+    items: group.items.filter((item) => {
+      if (isClerk && CLERK_HIDDEN_PATHS.includes(item.to)) return false
+      if (item.to === '/audit-log' && !isSuperAdmin) return false
+      return true
+    }),
   })).filter((group) => group.items.length > 0)
 })
+
 
 async function logout() {
   await auth.logout()

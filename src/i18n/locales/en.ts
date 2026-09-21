@@ -30,6 +30,13 @@ export default {
     Cashier: 'Cashier',
     'Inventory Manager': 'Inventory Manager',
     'Pharmacy Clerk': 'Pharmacy Clerk',
+    STOCK_IN: 'Stock In',
+    STOCK_OUT: 'Stock Out',
+    SALE: 'Sale',
+    DAMAGED: 'Damaged',
+    EXPIRED: 'Expired',
+    LOST: 'Lost',
+    CORRECTION: 'Correction',
   },
   // ຄຳທົ່ວໄປທີ່ໃຊ້ຊ້ຳຫຼາຍໜ້າ — ປຸ່ມ, ຫົວຖັນຕາຕະລາງ, ອື່ນໆ
   common: {
@@ -99,6 +106,7 @@ export default {
     users: 'Users & Staff',
     settings: 'Settings',
     notifications: 'Notifications',
+    auditLog: 'Audit Log',
   },
   header: {
     tagline: 'Management',
@@ -463,6 +471,21 @@ export default {
       expiryAlertsHint: 'Notify when a medicine is close to expiring',
       warnDaysBefore: 'Warn me this many days before expiry',
     },
+    auditLog: {
+      title: 'Audit Log',
+      subtitle: 'Full history of every stock change, who made it, and why',
+      searchPlaceholder: 'Search medicine, user, reason...',
+      allTypes: 'All Types',
+      entriesFound: '{n} entries found',
+      colDate: 'Date',
+      colBatch: 'Batch',
+      colType: 'Type',
+      colQuantity: 'Quantity',
+      colBalance: 'Balance After',
+      colReason: 'Reason',
+      colUser: 'User',
+      noResults: 'No stock movements match your filters.',
+    },
     expiry: {
       title: 'Expiry Tracking',
       subtitle: 'Monitor and manage medicine expiry dates',
@@ -686,6 +709,9 @@ export default {
       saved: 'Settings saved',
       loadFailed: 'Failed to load settings',
       saveFailed: 'Failed to save settings',
+    },
+    auditLog: {
+      loadFailed: 'Failed to load audit log',
     },
     expiry: {
       loadFailed: 'Failed to load expiry data',

@@ -29,6 +29,13 @@ export default {
     Cashier: 'แคชเชียร์',
     'Inventory Manager': 'ผู้จัดการคลังสินค้า',
     'Pharmacy Clerk': 'พนักงานร้านยา',
+    STOCK_IN: 'รับเข้าสต็อก',
+    STOCK_OUT: 'ออกจากสต็อก',
+    SALE: 'ขาย',
+    DAMAGED: 'เสียหาย',
+    EXPIRED: 'หมดอายุ',
+    LOST: 'สูญหาย',
+    CORRECTION: 'แก้ไขยอด',
   },
   common: {
     actions: 'การดำเนินการ',
@@ -97,6 +104,7 @@ export default {
     users: 'ผู้ใช้และพนักงาน',
     settings: 'ตั้งค่า',
     notifications: 'การแจ้งเตือน',
+    auditLog: 'บันทึกการตรวจสอบ',
   },
   header: {
     tagline: 'ระบบจัดการ',
@@ -459,6 +467,21 @@ export default {
       expiryAlertsHint: 'แจ้งเตือนเมื่อยาใกล้หมดอายุ',
       warnDaysBefore: 'แจ้งเตือนล่วงหน้ากี่วันก่อนหมดอายุ',
     },
+    auditLog: {
+      title: 'บันทึกการตรวจสอบ',
+      subtitle: 'ประวัติการเคลื่อนไหวสต็อกทั้งหมด — ใครทำ และทำไม',
+      searchPlaceholder: 'ค้นหายา, ผู้ใช้, เหตุผล...',
+      allTypes: 'ทุกประเภท',
+      entriesFound: 'พบ {n} รายการ',
+      colDate: 'วันที่',
+      colBatch: 'ล็อต',
+      colType: 'ประเภท',
+      colQuantity: 'จำนวน',
+      colBalance: 'ยอดคงเหลือ',
+      colReason: 'เหตุผล',
+      colUser: 'ผู้ใช้',
+      noResults: 'ไม่พบการเคลื่อนไหวสต็อกที่ตรงกับตัวกรอง',
+    },
     expiry: {
       title: 'ติดตามวันหมดอายุ',
       subtitle: 'ติดตามและจัดการวันหมดอายุของยา',
@@ -682,6 +705,9 @@ export default {
       saved: 'บันทึกการตั้งค่าแล้ว',
       loadFailed: 'โหลดการตั้งค่าไม่สำเร็จ',
       saveFailed: 'บันทึกการตั้งค่าไม่สำเร็จ',
+    },
+    auditLog: {
+      loadFailed: 'โหลดบันทึกการตรวจสอบไม่สำเร็จ',
     },
     expiry: {
       loadFailed: 'โหลดข้อมูลวันหมดอายุไม่สำเร็จ',

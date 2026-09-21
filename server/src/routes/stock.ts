@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../prisma'
-import { requireAuth } from '../middleware/auth'
+import { requireAuth, requireRole } from "../middleware/auth";
 import { asyncHandler } from '../lib/asyncHandler'
 import { deductFefo } from '../lib/fefo'
 
@@ -147,3 +147,28 @@ stockRouter.post(
     res.json({ ok: true })
   }),
 )
+// ປະຫວັດການເຄື່ອນໄຫວສະຕັອກທັງໝົດ — ສະເພາະ SUPER_ADMIN ເບິ່ງໄດ້ (audit log)
+stockRouter.get(
+  '/stock-movements',
+  requireRole('SUPER_ADMIN'),
+  asyncHandler(async (_req, res) => {
+    const rows = await prisma.stockMovement.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { medicine: true, user: true, batch: true },
+    })
+    res.json(
+      rows.map((m) => ({
+        id: m.id,
+        medicine: m.medicine.name,
+        batchNo: m.batch.batchNo,
+        type: m.type,
+        quantity: m.quantity,
+        balanceAfter: m.balanceAfter,
+        reason: m.reason,
+        user: m.user.name,
+        date: m.createdAt.toISOString(),
+      })),
+    )
+  }),
+)
+

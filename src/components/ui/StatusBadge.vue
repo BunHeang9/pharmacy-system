@@ -10,7 +10,7 @@ type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'mut
 // ໃຊ້ component ດຽວແທນ StockBadge / ExpiryBadge / PaymentBadge / PrescriptionBadge / RoleBadge
 const props = defineProps<{
   status: string
-  kind?: 'stock' | 'expiry' | 'payment' | 'prescription' | 'role'
+  kind?: 'stock' | 'expiry' | 'payment' | 'prescription' | 'role' | 'movement'
 }>()
 
 const maps: Record<string, Record<string, BadgeVariant>> = {
@@ -26,6 +26,16 @@ const maps: Record<string, Record<string, BadgeVariant>> = {
     'Inventory Manager': 'warning',
     'Pharmacy Clerk': 'muted',
   },
+    movement: {
+    STOCK_IN: 'success',
+    STOCK_OUT: 'default',
+    SALE: 'info',
+    DAMAGED: 'danger',
+    EXPIRED: 'danger',
+    LOST: 'danger',
+    CORRECTION: 'warning',
+  },
+
 
 }
 

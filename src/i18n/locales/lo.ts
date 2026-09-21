@@ -29,6 +29,13 @@ export default {
     Cashier: 'ຜູ້ຂາຍ',
     'Inventory Manager': 'ຜູ້ຈັດການສາງ',
     'Pharmacy Clerk': 'ພະນັກງານຮ້ານຢາ',
+    STOCK_IN: 'ຮັບເຂົ້າສະຕັອກ',
+    STOCK_OUT: 'ອອກຈາກສະຕັອກ',
+    SALE: 'ຂາຍ',
+    DAMAGED: 'ເສຍຫາຍ',
+    EXPIRED: 'ໝົດອາຍຸ',
+    LOST: 'ເສຍ',
+    CORRECTION: 'ແກ້ໄຂຍອດ',
   },
   common: {
     actions: 'ຈັດການ',
@@ -97,6 +104,7 @@ export default {
     users: 'ຜູ້ໃຊ້ ແລະ ພະນັກງານ',
     settings: 'ຕັ້ງຄ່າ',
     notifications: 'ການແຈ້ງເຕືອນ',
+    auditLog: 'ບັນທຶກກວດສອບ',
   },
   header: {
     tagline: 'ລະບົບຈັດການ',
@@ -459,6 +467,21 @@ export default {
       expiryAlertsHint: 'ແຈ້ງເຕືອນເມື່ອຢາໃກ້ໝົດອາຍຸ',
       warnDaysBefore: 'ແຈ້ງເຕືອນລ່ວງໜ້າຈັກມື້ກ່ອນໝົດອາຍຸ',
     },
+    auditLog: {
+      title: 'ບັນທຶກກວດສອບ',
+      subtitle: 'ປະຫວັດການເຄື່ອນໄຫວສະຕັອກທັງໝົດ — ໃຜເຮັດ ແລະ ເປັນຫຍັງ',
+      searchPlaceholder: 'ຄົ້ນຫາຢາ, ຜູ້ໃຊ້, ເຫດຜົນ...',
+      allTypes: 'ທຸກປະເພດ',
+      entriesFound: 'ພົບ {n} ລາຍການ',
+      colDate: 'ວັນທີ',
+      colBatch: 'ລອດ',
+      colType: 'ປະເພດ',
+      colQuantity: 'ຈຳນວນ',
+      colBalance: 'ຍອດຄົງເຫຼືອ',
+      colReason: 'ເຫດຜົນ',
+      colUser: 'ຜູ້ໃຊ້',
+      noResults: 'ບໍ່ພົບການເຄື່ອນໄຫວສະຕັອກທີ່ກົງກັບການກັ່ນຕອງ.',
+    },
     expiry: {
       title: 'ຕິດຕາມວັນໝົດອາຍຸ',
       subtitle: 'ຕິດຕາມ ແລະ ຈັດການວັນໝົດອາຍຸຂອງຢາ',
@@ -682,6 +705,9 @@ export default {
       saved: 'ບັນທຶກການຕັ້ງຄ່າແລ້ວ',
       loadFailed: 'ໂຫຼດການຕັ້ງຄ່າບໍ່ສຳເລັດ',
       saveFailed: 'ບັນທຶກການຕັ້ງຄ່າບໍ່ສຳເລັດ',
+    },
+    auditLog: {
+      loadFailed: 'ໂຫຼດບັນທຶກກວດສອບບໍ່ສຳເລັດ',
     },
     expiry: {
       loadFailed: 'ໂຫຼດຂໍ້ມູນວັນໝົດອາຍຸບໍ່ສຳເລັດ',

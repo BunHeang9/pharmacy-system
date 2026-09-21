@@ -2,9 +2,10 @@ import axios from 'axios'
 
 // ທຸກ request ໄປທີ່ /api/... → Vite proxy ສົ່ງຕໍ່ໄປຫາ Express (localhost:3000)
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || "/api",
+
   withCredentials: true, // ສົ່ງ session cookie ໄປນຳ
-})
+});
 
 api.interceptors.response.use(
   (res) => res,

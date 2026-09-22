@@ -180,11 +180,11 @@ async function completeSale() {
     cart.clear()
     cashAmount.value = ''
     selectedCustomerId.value = ''
-    await loadMedicines() // ສະຕັອກປ່ຽນແລ້ວ — ໂຫຼດຄືນໃຫ້ໜ້າຈໍທັນສະໄໝ
+    loadMedicines() // ສະຕັອກປ່ຽນແລ້ວ — ໂຫຼດຄືນໃນພື້ນຫຼັງ, ບໍ່ໃຫ້ modal ຊ້າຕາມ request ນີ້
     setTimeout(() => {
       showSuccess.value = false
       focusSearch()
-    }, 2000)
+    }, 900)
   } catch (e: any) {
     // ເຊັ່ນ: ຄົນອື່ນຂາຍໄປກ່ອນຈົນສະຕັອກບໍ່ພໍ — server ປະຕິເສດ, cart ບໍ່ຖືກລ້າງ
     toast.show(apiErrorMessage(e, t) || t('toasts.pos.saleFailed'), 'error')

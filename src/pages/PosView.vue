@@ -34,6 +34,7 @@ interface Medicine {
   taxRate: number
   stock: number
   minStock: number
+  imageUrl: string | null
 }
 interface CustomerOption {
   id: string
@@ -144,6 +145,10 @@ function onScan() {
 }
 
 function addToCart(med: Medicine) {
+  if (med.stock === 0) {
+    toast.show(t('toasts.pos.outOfStock', { name: med.name }), 'warning')
+    return
+  }
   cart.add(med)
   focusSearch()
 }
@@ -238,11 +243,20 @@ const money = formatMoney
           <button
             v-for="med in filteredMeds"
             :key="med.id"
-            class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left hover:border-blue-300 hover:shadow-md transition-all group"
+            class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
+            :class="med.stock > 0 ? 'hover:border-blue-300 hover:shadow-md' : ''"
+            :disabled="med.stock === 0"
             @click="addToCart(med)"
           >
+            <img
+              v-if="med.imageUrl"
+              :src="med.imageUrl"
+              :alt="med.name"
+              class="w-full h-36 object-cover rounded-lg mb-3"
+            />
             <div
-              class="w-10 h-10 bg-blue-50 dark:bg-blue-500/10 group-hover:bg-blue-100 rounded-lg flex items-center justify-center mb-3 transition"
+              v-else
+              class="w-full h-36 bg-blue-50 dark:bg-blue-500/10 group-hover:bg-blue-100 rounded-lg flex items-center justify-center mb-3 transition"
             >
               <span class="text-lg">💊</span>
             </div>

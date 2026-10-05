@@ -45,6 +45,7 @@ const canAdjust = computed(() => auth.user?.role !== 'PHARMACY_CLERK')
 
 const items = ref<Medicine[]>([])
 const search = ref('')
+const categoryFilter = ref('All Categories')
 const loading = ref(false)
 
 async function load() {
@@ -65,8 +66,18 @@ const lowStock = computed(() => items.value.filter((m) => m.status === 'Low Stoc
 const outOfStock = computed(() => items.value.filter((m) => m.status === 'Out of Stock').length)
 const totalValue = computed(() => items.value.reduce((s, m) => s + m.stock * m.sellingPrice, 0))
 
+const categoryOptions = computed(() => [
+  { value: 'All Categories', label: t('pages.medicines.allCategories') },
+  ...[...new Set(items.value.map((m) => m.category).filter((c): c is string => !!c))]
+    .sort((a, b) => a.localeCompare(b))
+    .map((name) => ({ value: name, label: name })),
+])
+
 const filtered = computed(() =>
-  items.value.filter((m) => !search.value || m.name.toLowerCase().includes(search.value.toLowerCase())),
+  items.value.filter((m) => {
+    if (categoryFilter.value !== 'All Categories' && m.category !== categoryFilter.value) return false
+    return !search.value || m.name.toLowerCase().includes(search.value.toLowerCase())
+  }),
 )
 
 const adjustMed = ref<Medicine | null>(null)
@@ -170,8 +181,9 @@ async function applyAdjustment() {
     </div>
 
     <SectionCard>
-      <div class="p-4 flex gap-3 items-center">
+      <div class="p-4 flex flex-col sm:flex-row gap-3 sm:items-center">
         <SearchInput v-model="search" :placeholder="t('pages.inventory.searchPlaceholder')" />
+        <SelectInput v-model="categoryFilter" :options="categoryOptions" />
       </div>
 
       <DataTable :headers="[t('common.medicine'), t('common.category'), t('pages.dashboard.stock'), t('pages.dashboard.minStock'), t('pages.inventory.colBatches'), t('pages.inventory.colNextExpiry'), t('common.status'), t('common.actions')]">

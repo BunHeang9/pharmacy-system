@@ -29,6 +29,8 @@ export function apiErrorMessage(err: any, t: TFunc): string {
     case 'PRESCRIPTION_ALREADY_PROCESSED':
       return t(`errors.${code}`, { status: t(`errors.status.${data.status}`) })
     case 'INVALID_INPUT':
+    case 'INVALID_IMAGE':
+    case 'UPLOAD_TOO_LARGE':
     case 'INVALID_CREDENTIALS':
     case 'NOT_AUTHENTICATED':
     case 'NOT_FOUND':

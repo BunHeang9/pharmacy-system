@@ -155,6 +155,7 @@ model Medicine {
   barcode              String? @unique
   sku                  String? @unique
   manufacturer         String?
+  imageUrl             String?
   purchasePrice        Decimal @default(0) @db.Decimal(12, 2)
   sellingPrice         Decimal @default(0) @db.Decimal(12, 2)
   taxRate              Decimal @default(0) @db.Decimal(5, 2)
@@ -408,5 +409,4 @@ model SupplierPayment {
 
   @@index([supplierId])
 }
-
 

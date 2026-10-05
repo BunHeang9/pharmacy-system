@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { Plus, Eye, Edit2, Trash2, Pill } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
@@ -44,6 +44,7 @@ interface Medicine {
   taxRate: number
   minStock: number
   prescription: boolean
+  imageUrl: string | null
 }
 interface Option { id: string; name: string }
 
@@ -151,14 +152,49 @@ const blankForm = {
   prescription: false,
 }
 const newMed = reactive({ ...blankForm })
+const imageFile = ref<File | null>(null)
+const imagePreview = ref('')
+const imageInput = ref<HTMLInputElement | null>(null)
+
+function clearSelectedImage() {
+  if (imagePreview.value.startsWith('blob:')) URL.revokeObjectURL(imagePreview.value)
+  imageFile.value = null
+  imagePreview.value = ''
+  if (imageInput.value) imageInput.value.value = ''
+}
+
+function onImageSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    toast.show(t('toasts.medicines.invalidImageType'), 'error')
+    input.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast.show(t('toasts.medicines.imageTooLarge'), 'error')
+    input.value = ''
+    return
+  }
+
+  clearSelectedImage()
+  imageFile.value = file
+  imagePreview.value = URL.createObjectURL(file)
+}
+
+onBeforeUnmount(clearSelectedImage)
 
 function openAdd() {
+  clearSelectedImage()
   editing.value = null
   Object.assign(newMed, blankForm, { categoryId: categories.value[0]?.id ?? '' })
   showAdd.value = true
 }
 
 function openEdit(m: Medicine) {
+  clearSelectedImage()
   editing.value = m
   Object.assign(newMed, {
     name: m.name,
@@ -208,17 +244,35 @@ async function saveMedicine() {
     prescriptionRequired: newMed.prescription,
   }
 
+  const wasEditing = Boolean(editing.value)
   try {
+    let savedMedicine: Medicine
     if (editing.value) {
       const { data } = await api.put<Medicine>(`/medicines/${editing.value.id}`, body)
-      const i = medicines.value.findIndex((x) => x.id === data.id)
-      if (i !== -1) medicines.value[i] = data
-      toast.show(t('toasts.medicines.updated'), 'success')
+      savedMedicine = data
     } else {
       const { data } = await api.post<Medicine>('/medicines', body)
-      medicines.value.unshift(data)
-      toast.show(t('toasts.medicines.created'), 'success')
+      savedMedicine = data
+      editing.value = data
     }
+
+    const existingIndex = medicines.value.findIndex((x) => x.id === savedMedicine.id)
+    if (existingIndex === -1) medicines.value.unshift(savedMedicine)
+    else medicines.value[existingIndex] = savedMedicine
+
+    if (imageFile.value) {
+      const { data } = await api.post<Medicine>(
+        `/medicines/${savedMedicine.id}/image`,
+        imageFile.value,
+        { headers: { 'Content-Type': imageFile.value.type } },
+      )
+      savedMedicine = data
+      const index = medicines.value.findIndex((x) => x.id === data.id)
+      if (index !== -1) medicines.value[index] = data
+    }
+
+    toast.show(wasEditing ? t('toasts.medicines.updated') : t('toasts.medicines.created'), 'success')
+    clearSelectedImage()
     showAdd.value = false
   } catch (e: any) {
     toast.show(apiErrorMessage(e, t) || t('toasts.medicines.saveFailed'), 'error')
@@ -259,7 +313,8 @@ const money = formatMoney
         <TableRow v-for="m in filtered" :key="m.id">
           <TableCell>
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 bg-blue-50 dark:bg-blue-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
+              <img v-if="m.imageUrl" :src="m.imageUrl" :alt="m.name" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+              <div v-else class="w-8 h-8 bg-blue-50 dark:bg-blue-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Pill class="w-4 h-4 text-blue-500" />
               </div>
               <div>
@@ -327,6 +382,24 @@ const money = formatMoney
             />
             <TextInput v-model="newMed.barcode" :label="t('pages.medicines.barcode')" placeholder="8901030865068" />
             <TextInput v-model="newMed.sku" :label="t('pages.medicines.sku')" placeholder="AMX-500-CAP" />
+            <div class="space-y-2">
+              <label for="medicine-image" class="block text-xs font-medium text-slate-700 dark:text-slate-300">{{ t('pages.medicines.image') }}</label>
+              <input
+                id="medicine-image"
+                ref="imageInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                class="w-full text-sm text-slate-600 dark:text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-xs file:font-medium file:text-blue-700"
+                @change="onImageSelected"
+              />
+              <img
+                v-if="imagePreview || editing?.imageUrl"
+                :src="imagePreview || editing?.imageUrl || ''"
+                :alt="t('pages.medicines.imagePreview')"
+                class="h-16 w-16 rounded-lg object-cover"
+              />
+              <p class="text-xs text-slate-400">{{ t('pages.medicines.imageHint') }}</p>
+            </div>
           </FormGrid>
         </div>
 
@@ -358,8 +431,9 @@ const money = formatMoney
     <Modal :open="viewMed !== null" :title="t('pages.medicines.medicineDetails')" size="lg" @update:open="(v) => !v && (viewMed = null)">
       <div v-if="viewMed" class="space-y-5">
         <div class="flex items-start gap-4 pb-4 border-b border-slate-100 dark:border-slate-700">
-          <div class="w-16 h-16 bg-blue-50 dark:bg-blue-500/15 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Pill class="w-8 h-8 text-blue-500" />
+          <div class="w-16 h-16 bg-blue-50 dark:bg-blue-500/15 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+            <img v-if="viewMed.imageUrl" :src="viewMed.imageUrl" :alt="viewMed.name" class="w-full h-full object-cover" />
+            <Pill v-else class="w-8 h-8 text-blue-500" />
           </div>
           <div class="flex-1">
             <div class="flex items-center gap-2">

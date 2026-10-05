@@ -83,3 +83,66 @@ host (Railway/Render) for the API + Vercel/Netlify for the client.
 If you are working on this codebase with an AI assistant, the
 conventions, design system, backend structure and domain rules live in
 [CLAUDE.md](CLAUDE.md). Read it before making changes.
+
+
+## Project Scope
+Manage Basic Data
+- Manage medicine information, including name, generic name, brand, form, strength, barcode, prices, and minimum stock level
+- Manage medicine categories
+- Manage suppliers
+- Manage customer information
+- Manage user accounts, staff roles, and access permissions
+- Manage pharmacy settings, including shop details, currency, tax, and alert preferences
+Sales and Point of Sale
+- Search for and select medicines for a sale
+- Enter medicine quantities and calculate the sale total
+- Select a customer or record a walk-in sale
+- Select a payment method
+- Save and view sales records
+- Generate or print receipts
+Purchasing and Suppliers
+- Create and manage purchase orders
+- Select a supplier and add medicines to an order
+- Record purchase quantities, costs, batch numbers, and expiry dates
+- Track purchase order status
+- Record payments to suppliers
+Inventory and Expiry Management
+- Track medicine stock by batch and branch
+- Record stock received, sold, damaged, expired, lost, or corrected
+- View current stock levels
+- Identify low-stock medicines
+- Track medicine expiry dates and show upcoming expiry alerts
+- Maintain a history of stock movements
+Prescription Management
+- Record prescription and patient details
+- Add prescribed medicines and dosage instructions
+- Track prescription status
+- Record the pharmacist responsible for processing a prescription
+Customer Management
+- Add and update customer information
+- View customer purchase history
+- Manage customer discounts
+Staff and Access Management
+- Manage staff accounts and roles
+- Restrict system access according to user roles
+- Track staff actions where audit logging is available
+Expenses and Notifications
+- Record pharmacy expenses by category
+- View expense records
+- Show alerts for low stock, upcoming expiry dates, and pending prescriptions
+Reports
+- View sales reports
+- View inventory and stock movement reports
+- View medicine expiry and low-stock reports
+- View purchase and supplier reports
+- View expense reports
+- View dashboard summaries and sales statistics
+System Features
+- Support Lao, Thai, and English interface options
+- Provide light and dark display themes
+- Support pharmacy operations for a shop, with the system designed to allow future expansion to multiple branches
+Current implementation note: Login, medicine, category, and supplier management are connected to the database. The README indicates that several other areas still use sample data, and batch-based stock tracking is not yet implemented.
+
+## Medicine image uploads
+
+Medicine images can be selected from a device as JPEG, PNG, or WebP files up to 5 MB. The API saves them under `UPLOAD_DIR/medicines` and stores their `/uploads/medicines/...` path in PostgreSQL. For Railway, attach a persistent volume mounted at `/data` and set `UPLOAD_DIR=/data/uploads`. The Cloudflare Worker must proxy `/uploads/` requests to the Railway API so deployed clients can view the files. Images saved before persistent storage is configured must be uploaded again.

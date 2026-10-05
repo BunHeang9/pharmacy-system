@@ -127,6 +127,8 @@ export default {
   // the API sends (see server's global error handler + each route file).
   errors: {
     INVALID_INPUT: 'Invalid data',
+    INVALID_IMAGE: 'Choose a JPEG, PNG, or WebP image',
+    UPLOAD_TOO_LARGE: 'Image must be 5 MB or smaller',
     INVALID_CREDENTIALS: 'Incorrect email or password',
     NOT_AUTHENTICATED: 'Please log in to continue',
     NOT_FOUND: 'Record not found',
@@ -211,6 +213,9 @@ export default {
       brandName: 'Brand Name',
       dosageForm: 'Dosage Form',
       manufacturer: 'Manufacturer',
+      image: 'Medicine image',
+      imagePreview: 'Medicine image preview',
+      imageHint: 'JPEG, PNG, or WebP · max 5 MB',
       noSupplier: '— No supplier —',
       barcode: 'Barcode',
       sku: 'SKU',
@@ -628,6 +633,8 @@ export default {
       updated: 'Medicine updated',
       saveFailed: 'Save failed',
       deleteFailed: 'Delete failed',
+      invalidImageType: 'Choose a JPEG, PNG, or WebP image',
+      imageTooLarge: 'Image must be 5 MB or smaller',
     },
     inventory: {
       loadFailed: 'Failed to load inventory data',

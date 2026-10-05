@@ -123,6 +123,8 @@ export default {
 
   errors: {
     INVALID_INPUT: 'ข้อมูลไม่ถูกต้อง',
+    INVALID_IMAGE: 'เลือกภาพ JPEG, PNG หรือ WebP',
+    UPLOAD_TOO_LARGE: 'ภาพต้องมีขนาดไม่เกิน 5 MB',
     INVALID_CREDENTIALS: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
     NOT_AUTHENTICATED: 'กรุณาเข้าสู่ระบบก่อน',
     NOT_FOUND: 'ไม่พบข้อมูล',
@@ -207,6 +209,9 @@ export default {
       brandName: 'ชื่อยี่ห้อ',
       dosageForm: 'รูปแบบยา',
       manufacturer: 'ผู้ผลิต',
+      image: 'รูปยา',
+      imagePreview: 'ตัวอย่างรูปยา',
+      imageHint: 'JPEG, PNG หรือ WebP · สูงสุด 5 MB',
       noSupplier: '— ไม่มีผู้จัดจำหน่าย —',
       barcode: 'Barcode',
       sku: 'SKU',
@@ -624,6 +629,8 @@ export default {
       updated: 'อัปเดตยาแล้ว',
       saveFailed: 'บันทึกไม่สำเร็จ',
       deleteFailed: 'ลบไม่สำเร็จ',
+      invalidImageType: 'เลือกภาพ JPEG, PNG หรือ WebP',
+      imageTooLarge: 'ภาพต้องมีขนาดไม่เกิน 5 MB',
     },
     inventory: {
       loadFailed: 'โหลดข้อมูลคลังไม่สำเร็จ',

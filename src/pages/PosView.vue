@@ -214,7 +214,7 @@ const money = formatMoney
               v-model="search"
               type="text"
               :placeholder="t('pages.pos.searchPlaceholder')"
-              class="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+              class="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 border border-slate-200 dark:border-slate-700 rounded-lg dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
               @keyup.enter="onScan"
             />
           </div>

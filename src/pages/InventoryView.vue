@@ -28,6 +28,7 @@ interface Medicine {
   category: string | null
   form: string
   strength: string
+  unit: string | null
   sellingPrice: number
   minStock: number
   stock: number
@@ -198,10 +199,10 @@ async function applyAdjustment() {
               class="font-mono text-sm font-bold"
               :class="m.stock === 0 ? 'text-red-600' : m.stock < m.minStock ? 'text-amber-600' : 'text-slate-800 dark:text-slate-100'"
             >
-              {{ m.stock }}
+              {{ m.stock }} {{ m.unit || 'units' }}
             </span>
           </TableCell>
-          <TableCell><span class="font-mono text-sm text-slate-400">{{ m.minStock }}</span></TableCell>
+          <TableCell><span class="font-mono text-sm text-slate-400">{{ m.minStock }} {{ m.unit || 'units' }}</span></TableCell>
           <TableCell><span class="font-mono text-sm text-slate-500 dark:text-slate-400">{{ m.batchCount }}</span></TableCell>
           <TableCell><span class="text-xs text-slate-500 dark:text-slate-400">{{ m.nextExpiry || '—' }}</span></TableCell>
           <TableCell><StatusBadge kind="stock" :status="m.status" /></TableCell>
@@ -232,7 +233,7 @@ async function applyAdjustment() {
             <div class="text-xs text-slate-500 dark:text-slate-400">{{ t('pages.inventory.batchesCount', { n: adjustMed.batchCount }) }}</div>
           </div>
           <div class="text-right">
-            <div class="text-xl font-bold font-mono text-slate-800 dark:text-slate-100">{{ adjustMed.stock }}</div>
+            <div class="text-xl font-bold font-mono text-slate-800 dark:text-slate-100">{{ adjustMed.stock }} {{ adjustMed.unit || 'units' }}</div>
             <div class="text-xs text-slate-400">{{ t('pages.inventory.currentQty') }}</div>
           </div>
         </div>
@@ -244,12 +245,18 @@ async function applyAdjustment() {
           <TextInput v-model="adjust.expiryDate" :label="t('common.expiryDate')" type="date" required />
         </FormGrid>
 
-        <TextInput v-model="adjust.qty" :label="t('pages.inventory.quantity')" type="number" placeholder="0" required />
+        <TextInput
+          v-model="adjust.qty"
+          :label="`${t('pages.inventory.quantity')} (${adjustMed.unit || 'units'})`"
+          type="number"
+          placeholder="0"
+          required
+        />
 
         <div v-if="preview !== null" class="flex items-center justify-between bg-blue-50 dark:bg-blue-500/10 rounded-lg px-3 py-2">
           <span class="text-xs font-medium text-blue-700 dark:text-blue-300">{{ t('pages.inventory.stockAfterAdjust') }}</span>
           <span class="font-mono font-bold" :class="preview < 0 ? 'text-red-600' : 'text-blue-700 dark:text-blue-300'">
-            {{ adjustMed.stock }} → {{ preview }}
+            {{ adjustMed.stock }} → {{ preview }} {{ adjustMed.unit || 'units' }}
           </span>
         </div>
 

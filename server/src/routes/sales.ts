@@ -12,16 +12,17 @@ const checkoutSchema = z.object({
   customerId: z.string().optional(), // ເລືອກລູກຄ້າຈາກ Customers — ວ່າງ = ລູກຄ້າຈອນ
   customerName: z.string().optional(),
   discountPercent: z.coerce.number().min(0).max(100).default(0),
-  paymentMethod: z.enum(['CASH', 'CARD', 'QR', 'OTHER']).default('CASH'),
+  paymentMethod: z.enum(["CASH", "CARD", "QR", "OTHER"]).default("CASH"),
   items: z
     .array(
       z.object({
         medicineId: z.string().min(1),
         quantity: z.coerce.number().int().positive(),
+        saleUnit: z.enum(["UNIT", "PACK"]).default("UNIT"),
       }),
     )
     .min(1),
-})
+});
 
 const toDto = (s: any) => ({
   id: s.id,
@@ -71,10 +72,12 @@ salesRouter.get(
         medicineId: i.medicineId,
         medicine: i.medicine.name,
         quantity: i.quantity,
+        saleUnit: i.saleUnit,
+        unitsPerPack: i.unitsPerPack,
         unitPrice: Number(i.unitPrice),
         lineTotal: Number(i.lineTotal),
       })),
-    })
+    });
   }),
 )
 
@@ -112,15 +115,36 @@ salesRouter.post(
         res.status(404).json({ code: 'NOT_FOUND', error: 'One or more medicines were not found' })
         return
       }
+      const medicine = medById.get(i.medicineId)!;
+      if (i.saleUnit === "PACK" && medicine.packSellingPrice == null) {
+        res.status(400).json({
+          code: "PACK_PRICE_NOT_SET",
+          error: `Pack selling price is not set for ${medicine.name}`,
+        });
+        return;
+      }
     }
 
     let subtotal = 0
     const lines = items.map((i) => {
       const m = medById.get(i.medicineId)!
-      const unitPrice = Number(m.sellingPrice)
+      const unitPrice =
+        i.saleUnit === "PACK"
+          ? Number(m.packSellingPrice)
+          : Number(m.sellingPrice);
       const lineSubtotal = unitPrice * i.quantity
       subtotal += lineSubtotal
-      return { medicineId: i.medicineId, quantity: i.quantity, unitPrice, lineSubtotal, taxRate: Number(m.taxRate) }
+      return {
+        medicineId: i.medicineId,
+        quantity: i.quantity,
+        saleUnit: i.saleUnit,
+        unitsPerPack: m.unitsPerPack,
+        stockQuantity:
+          i.quantity * (i.saleUnit === "PACK" ? m.unitsPerPack : 1),
+        unitPrice,
+        lineSubtotal,
+        taxRate: Number(m.taxRate),
+      };
     })
 
     const discountAmount = (subtotal * discountPercent) / 100
@@ -140,11 +164,11 @@ salesRouter.post(
         await deductFefo(tx, {
           medicineId: l.medicineId,
           branchId,
-          quantity: l.quantity,
-          type: 'SALE',
+          quantity: l.stockQuantity,
+          type: "SALE",
           reason: `Sale ${saleNo}`,
           userId,
-        })
+        });
       }
 
       return tx.sale.create({
@@ -163,13 +187,15 @@ salesRouter.post(
             create: lines.map((l) => ({
               medicineId: l.medicineId,
               quantity: l.quantity,
+              saleUnit: l.saleUnit,
+              unitsPerPack: l.unitsPerPack,
               unitPrice: l.unitPrice,
               lineTotal: l.unitPrice * l.quantity,
             })),
           },
         },
         include: withRels,
-      })
+      });
     }, { timeout: 30_000 })
     // ↑ default 5000ms ບໍ່ພໍ ຖ້າ database ຢູ່ໄກ (network latency) ແລະ sale ມີຫຼາຍລາຍການ —
     // ແຕ່ລະລາຍການ deductFefo ໃຊ້ຫຼາຍ round trip (find batch + update + ບັນທຶກ movement)

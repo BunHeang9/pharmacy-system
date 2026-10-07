@@ -151,7 +151,11 @@ model Medicine {
   brand                String?
   form                 String?
   strength             String?
-  unit                 String?
+  unit                 String? @default("unit") //smallest unit (e.g., tablet, capsule, ml, g)
+  packUnit             String?  // e.g., box, bottle, strip
+  unitsPerPack Int @default(1)
+  packPurchasePrice     Decimal? @db.Decimal(12, 2) // ລາຄາຊື້ຕໍ່ pack ຈາກ supplier
+  packSellingPrice      Decimal? @db.Decimal(12, 2) // �ລາຄາຂາຍຕໍ່ pack �
   barcode              String? @unique
   sku                  String? @unique
   manufacturer         String?
@@ -272,6 +276,8 @@ model SaleItem {
   medicine   Medicine @relation(fields: [medicineId], references: [id])
   quantity   Int
   unitPrice  Decimal  @db.Decimal(12, 2)
+    saleUnit     SaleUnit @default(UNIT)
+  unitsPerPack Int      @default(1)
   lineTotal  Decimal  @db.Decimal(12, 2)
 
   @@index([saleId])
@@ -282,7 +288,10 @@ enum PurchaseStatus {
   RECEIVED
   CANCELLED
 }
-
+enum SaleUnit {
+  UNIT
+  PACK
+}
 // ໃບສັ່ງຊື້ຈາກຜູ້ສະໜອງ — ຍັງບໍ່ກະທົບສະຕັອກຈົນກວ່າຈະ "receive"
 model Purchase {
   id          String         @id @default(cuid())
@@ -314,6 +323,7 @@ model PurchaseItem {
   medicine   Medicine @relation(fields: [medicineId], references: [id])
   quantity   Int
   unitCost   Decimal  @db.Decimal(12, 2)
+  unitsPerPack Int @default(1)
   lineTotal  Decimal  @db.Decimal(12, 2)
   batchNo    String
   expiryDate DateTime

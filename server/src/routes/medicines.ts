@@ -20,6 +20,10 @@ const createSchema = z.object({
   form: z.string().optional().default(""),
   strength: z.string().optional().default(""),
   unit: z.string().optional().default(""),
+  packUnit: z.string().optional().default(""),
+  unitsPerPack: z.coerce.number().int().min(1).default(1),
+  packPurchasePrice: z.coerce.number().min(0).nullable().optional(),
+  packSellingPrice: z.coerce.number().min(0).nullable().optional(),
   barcode: z.string().nullable().optional(),
   sku: z.string().nullable().optional(),
   manufacturer: z.string().optional().default(""),
@@ -56,6 +60,12 @@ const toDto = (m: any) => {
     form: m.form,
     strength: m.strength,
     unit: m.unit,
+    packUnit: m.packUnit,
+    unitsPerPack: m.unitsPerPack,
+    packPurchasePrice:
+      m.packPurchasePrice == null ? null : Number(m.packPurchasePrice),
+    packSellingPrice:
+      m.packSellingPrice == null ? null : Number(m.packSellingPrice),
     barcode: m.barcode,
     sku: m.sku,
     manufacturer: m.manufacturer,
@@ -125,11 +135,15 @@ medicinesRouter.post(
     const contentType = req.headers["content-type"] ?? "";
     const extension = imageTypes[contentType];
     if (!extension || !Buffer.isBuffer(req.body)) {
-      res.status(400).json({ code: "INVALID_IMAGE", error: "Unsupported image" });
+      res
+        .status(400)
+        .json({ code: "INVALID_IMAGE", error: "Unsupported image" });
       return;
     }
 
-    const medicine = await prisma.medicine.findUnique({ where: { id: req.params.id } });
+    const medicine = await prisma.medicine.findUnique({
+      where: { id: req.params.id },
+    });
     if (!medicine || !medicine.isActive) {
       res.status(404).json({ code: "NOT_FOUND", error: "Medicine not found" });
       return;
@@ -152,7 +166,9 @@ medicinesRouter.post(
     }
 
     if (medicine.imageUrl?.startsWith("/uploads/medicines/")) {
-      await rm(path.join(imageDirectory, path.basename(medicine.imageUrl)), { force: true });
+      await rm(path.join(imageDirectory, path.basename(medicine.imageUrl)), {
+        force: true,
+      });
     }
     res.json(toDto(updated));
   }),
@@ -182,6 +198,10 @@ medicinesRouter.post(
         form: d.form,
         strength: d.strength,
         unit: d.unit,
+        packUnit: d.packUnit,
+        unitsPerPack: d.unitsPerPack,
+        packPurchasePrice: d.packPurchasePrice ?? null,
+        packSellingPrice: d.packSellingPrice ?? null,
         barcode: d.barcode || null,
         sku: d.sku || null,
         manufacturer: d.manufacturer,

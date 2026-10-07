@@ -25,10 +25,27 @@ const createSchema = z.object({
     )
     .min(1),
 })
+type PurchaseInputItem = z.infer<typeof createSchema>["items"][number];
 
-const toDto = (p: any) => ({ //toDto mean convert Purchase -> DTO(data transfer object)
-    id: p.id, //p mean purchase returned from Prisma
-     purchaseNo: p.purchaseNo,// mean get the purchase number
+async function prepareLines(items: PurchaseInputItem[]) {
+  const medicines = await prisma.medicine.findMany({
+    where: { id: { in: [...new Set(items.map((item) => item.medicineId))] } },
+    select: { id: true, unitsPerPack: true },
+  });
+  const factorByMedicine = new Map(
+    medicines.map((medicine) => [medicine.id, medicine.unitsPerPack]),
+  );
+
+  return items.map((item) => ({
+    ...item,
+    unitsPerPack: factorByMedicine.get(item.medicineId) ?? 1,
+    lineTotal: item.quantity * item.unitCost,
+  }));
+}
+const toDto = (p: any) => ({
+  //toDto mean convert Purchase -> DTO(data transfer object)
+  id: p.id, //p mean purchase returned from Prisma
+  purchaseNo: p.purchaseNo, // mean get the purchase number
   supplier: p.supplier?.name ?? null,
   supplierId: p.supplierId,
   status: p.status,
@@ -37,37 +54,42 @@ const toDto = (p: any) => ({ //toDto mean convert Purchase -> DTO(data transfer 
   total: Number(p.total),
   date: p.createdAt.toISOString().slice(0, 10),
   receivedAt: p.receivedAt ? p.receivedAt.toISOString().slice(0, 10) : null,
-})
+});
 
-const withRels = { supplier: true, items: true } as const
+const withRels = { supplier: true, items: true } as const;
 
 // ລາຍການໃບສັ່ງຊື້
-purchasesRouter.get( // This create GET endpoint 
-  '/',
+purchasesRouter.get(
+  // This create GET endpoint
+  "/",
   asyncHandler(async (_req, res) => {
     const rows = await prisma.purchase.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: withRels,
-    })
-    res.json(rows.map(toDto))
+    });
+    res.json(rows.map(toDto));
   }),
-)
+);
 // ສ້າງໃບສັ່ງຊື້ໃໝ່ — ຍັງບໍ່ກະທົບສະຕັອກ (ລໍຖ້າ receive)
 purchasesRouter.post(
-  '/',
+  "/",
   asyncHandler(async (req, res) => {
-    const parsed = createSchema.safeParse(req.body)
+    const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ code: 'INVALID_INPUT', error: 'Invalid data', details: parsed.error.issues })
-      return
+      res.status(400).json({
+        code: "INVALID_INPUT",
+        error: "Invalid data",
+        details: parsed.error.issues,
+      });
+      return;
     }
-    const { supplierId, items } = parsed.data
-    const branchId = req.user!.branchId ?? 'main'
+    const { supplierId, items } = parsed.data;
+    const branchId = req.user!.branchId ?? "main";
 
-    const lines = items.map((i) => ({ ...i, lineTotal: i.quantity * i.unitCost }))
-    const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0)
+    const lines = await prepareLines(items);
+    const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
 
-    const purchaseNo = `PO-${new Date().getFullYear()}-${String((await prisma.purchase.count()) + 1).padStart(4, '0')}`
+    const purchaseNo = `PO-${new Date().getFullYear()}-${String((await prisma.purchase.count()) + 1).padStart(4, "0")}`;
 
     const purchase = await prisma.purchase.create({
       data: {
@@ -89,22 +111,22 @@ purchasesRouter.post(
         },
       },
       include: withRels,
-    })
+    });
 
-    res.status(201).json(toDto(purchase))
+    res.status(201).json(toDto(purchase));
   }),
-)
+);
 // ລາຍລະອຽດໃບສັ່ງຊື້ໜຶ່ງໃບ (ລວມລາຍການ + ຊື່ຢາ)
 purchasesRouter.get(
-  '/:id',
+  "/:id",
   asyncHandler(async (req, res) => {
     const p = await prisma.purchase.findUnique({
       where: { id: req.params.id },
       include: { supplier: true, items: { include: { medicine: true } } },
-    })
+    });
     if (!p) {
-      res.status(404).json({ code: 'NOT_FOUND', error: 'Not found' })
-      return
+      res.status(404).json({ code: "NOT_FOUND", error: "Not found" });
+      return;
     }
     res.json({
       ...toDto(p),
@@ -117,104 +139,113 @@ purchasesRouter.get(
         batchNo: i.batchNo,
         expiryDate: i.expiryDate.toISOString().slice(0, 10),
       })),
-    })
+    });
   }),
-)
+);
 
 // ຮັບເຄື່ອງ — ສ້າງ batch ໃໝ່ໃຫ້ທຸກລາຍການ + ເພີ່ມຍອດຄ້າງຈ່າຍໃຫ້ຜູ້ສະໜອງ, ຄັ້ງດຽວເທົ່ານັ້ນ
 purchasesRouter.post(
-  '/:id/receive',
+  "/:id/receive",
   asyncHandler(async (req, res) => {
     const existing = await prisma.purchase.findUnique({
       where: { id: req.params.id },
       include: { items: true },
-    })
+    });
     if (!existing) {
-      res.status(404).json({ code: 'NOT_FOUND', error: 'Not found' })
-      return
+      res.status(404).json({ code: "NOT_FOUND", error: "Not found" });
+      return;
     }
-    if (existing.status !== 'PENDING') {
+    if (existing.status !== "PENDING") {
       res.status(409).json({
-        code: 'PURCHASE_NOT_PENDING',
+        code: "PURCHASE_NOT_PENDING",
         status: existing.status,
         error: `Purchase is already ${existing.status.toLowerCase()}`,
-      })
-      return
+      });
+      return;
     }
 
-    const userId = req.user!.id
+    const userId = req.user!.id;
 
-    const purchase = await prisma.$transaction(async (tx) => {
-      for (const item of existing.items) {
-        const batch = await tx.batch.create({
-          data: {
-            medicineId: item.medicineId,
-            branchId: existing.branchId,
-            batchNo: item.batchNo,
-            quantity: item.quantity,
-            expiryDate: item.expiryDate,
-          },
-        })
-        await tx.stockMovement.create({
-          data: {
-            batchId: batch.id,
-            medicineId: item.medicineId,
-            branchId: existing.branchId,
-            type: 'STOCK_IN',
-            quantity: item.quantity,
-            balanceAfter: item.quantity,
-            reason: `Purchase ${existing.purchaseNo}`,
-            userId,
-          },
-        })
-      }
+    const purchase = await prisma.$transaction(
+      async (tx) => {
+        for (const item of existing.items) {
+          const batch = await tx.batch.create({
+            data: {
+              medicineId: item.medicineId,
+              branchId: existing.branchId,
+              batchNo: item.batchNo,
+              quantity: item.quantity,
+              expiryDate: item.expiryDate,
+            },
+          });
+          await tx.stockMovement.create({
+            data: {
+              batchId: batch.id,
+              medicineId: item.medicineId,
+              branchId: existing.branchId,
+              type: "STOCK_IN",
+              quantity: item.quantity,
+              balanceAfter: item.quantity,
+              reason: `Purchase ${existing.purchaseNo}`,
+              userId,
+            },
+          });
+        }
 
-      await tx.supplier.update({
-        where: { id: existing.supplierId },
-        data: { balance: { increment: existing.total } },
-      })
+        await tx.supplier.update({
+          where: { id: existing.supplierId },
+          data: { balance: { increment: existing.total } },
+        });
 
-      return tx.purchase.update({
-        where: { id: existing.id },
-        data: { status: 'RECEIVED', receivedAt: new Date() },
-        include: { supplier: true, items: true },
-      })
-    }, { timeout: 30_000 })
+        return tx.purchase.update({
+          where: { id: existing.id },
+          data: { status: "RECEIVED", receivedAt: new Date() },
+          include: { supplier: true, items: true },
+        });
+      },
+      { timeout: 30_000 },
+    );
     // ↑ default 5000ms ບໍ່ພໍ ຖ້າ database ຢູ່ໄກ — ສ້າງ batch/movement ຕໍ່ລາຍການໃຊ້ຫຼາຍ round trip
 
-    res.json(toDto(purchase))
+    res.json(toDto(purchase));
   }),
-)
+);
 
 // ແກ້ໄຂ — ອະນຸຍາດສະເພາະ PENDING (ຍັງບໍ່ໄດ້ receive, ຍັງບໍ່ກະທົບສະຕັອກ/ຍອດຄ້າງຈ່າຍ)
 purchasesRouter.put(
-  '/:id',
+  "/:id",
   asyncHandler(async (req, res) => {
-    const existing = await prisma.purchase.findUnique({ where: { id: req.params.id } })
+    const existing = await prisma.purchase.findUnique({
+      where: { id: req.params.id },
+    });
     if (!existing) {
-      res.status(404).json({ code: 'NOT_FOUND', error: 'Not found' })
-      return
+      res.status(404).json({ code: "NOT_FOUND", error: "Not found" });
+      return;
     }
-    if (existing.status !== 'PENDING') {
+    if (existing.status !== "PENDING") {
       res.status(409).json({
-        code: 'PURCHASE_NOT_PENDING',
+        code: "PURCHASE_NOT_PENDING",
         status: existing.status,
         error: `Purchase is already ${existing.status.toLowerCase()}`,
-      })
-      return
+      });
+      return;
     }
-    const parsed = createSchema.safeParse(req.body)
+    const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ code: 'INVALID_INPUT', error: 'Invalid data', details: parsed.error.issues })
-      return
+      res.status(400).json({
+        code: "INVALID_INPUT",
+        error: "Invalid data",
+        details: parsed.error.issues,
+      });
+      return;
     }
-    const { supplierId, items } = parsed.data
-    const lines = items.map((i) => ({ ...i, lineTotal: i.quantity * i.unitCost }))
-    const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0)
+    const { supplierId, items } = parsed.data;
+    const lines = await prepareLines(items);
+    const subtotal = lines.reduce((s, l) => s + l.lineTotal, 0);
 
     const purchase = await prisma.$transaction(async (tx) => {
       // ລຶບລາຍການເກົ່າແລ້ວສ້າງໃໝ່ທັງໝົດ — ງ່າຍກວ່າ diff ເທື່ອລະລາຍການ ແລະ ບໍ່ມີຄວາມສ່ຽງເລື່ອງ stale item
-      await tx.purchaseItem.deleteMany({ where: { purchaseId: existing.id } })
+      await tx.purchaseItem.deleteMany({ where: { purchaseId: existing.id } });
       return tx.purchase.update({
         where: { id: existing.id },
         data: {
@@ -233,12 +264,12 @@ purchasesRouter.put(
           },
         },
         include: withRels,
-      })
-    })
+      });
+    });
 
-    res.json(toDto(purchase))
+    res.json(toDto(purchase));
   }),
-)
+);
 
 // ຍົກເລີກ — ອະນຸຍາດສະເພາະ PENDING; ບໍ່ລຶບແຖວ, ແຕ່ປ່ຽນສະຖານະເປັນ CANCELLED (ຄືກັນກັບ soft-delete ບ່ອນອື່ນ)
 purchasesRouter.delete(

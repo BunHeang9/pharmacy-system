@@ -36,6 +36,10 @@ interface Medicine {
   form: string
   strength: string
   unit: string
+  packUnit: string
+  unitsPerPack: number
+  packPurchasePrice: number | null
+  packSellingPrice: number | null
   barcode: string | null
   sku: string | null
   manufacturer: string
@@ -146,10 +150,14 @@ async function confirmDelete() {
 const blankForm = {
   name: '', generic: '', brand: '',
   categoryId: '', supplierId: '',
-  form: 'Tablet', strength: '', manufacturer: '',
+  form: 'Tablet', strength: '', unit: 'tablet', manufacturer: '',
   barcode: '', sku: '',
   purchasePrice: '', sellingPrice: '', taxRate: '', minStock: '',
   prescription: false,
+  packUnit: '',
+  unitsPerPack: '1',
+  packPurchasePrice: '',
+  packSellingPrice: '',
 }
 const newMed = reactive({ ...blankForm })
 const imageFile = ref<File | null>(null)
@@ -205,6 +213,10 @@ function openEdit(m: Medicine) {
     form: m.form,
     strength: m.strength,
     manufacturer: m.manufacturer,
+    packUnit: m.packUnit ?? '',
+    unitsPerPack: String(m.unitsPerPack ?? 1),
+    packPurchasePrice: m.packPurchasePrice == null ? '' : String(m.packPurchasePrice),
+    packSellingPrice: m.packSellingPrice == null ? '' : String(m.packSellingPrice),
     barcode: m.barcode ?? '',
     sku: m.sku ?? '',
     purchasePrice: String(m.purchasePrice),
@@ -212,6 +224,7 @@ function openEdit(m: Medicine) {
     taxRate: String(m.taxRate),
     minStock: String(m.minStock),
     prescription: m.prescription,
+
   })
   showAdd.value = true
 }
@@ -235,6 +248,10 @@ async function saveMedicine() {
     form: newMed.form,
     strength: newMed.strength,
     manufacturer: newMed.manufacturer,
+    packUnit: newMed.packUnit,
+    unitsPerPack: Number(newMed.unitsPerPack || 1),
+    packPurchasePrice: newMed.packPurchasePrice === '' ? null : Number(newMed.packPurchasePrice),
+    packSellingPrice: newMed.packSellingPrice === '' ? null : Number(newMed.packSellingPrice),
     barcode: newMed.barcode || null,
     sku: newMed.sku || null,
     purchasePrice: Number(newMed.purchasePrice || 0),
@@ -306,7 +323,7 @@ const money = formatMoney
         :headers="[
           t('pages.medicines.colMedicineName'), t('pages.medicines.colGenericName'), t('common.category'),
           t('pages.medicines.colBrand'), t('pages.medicines.colForm'), t('pages.medicines.colStrength'),
-          t('pages.medicines.colPurchase'), t('pages.medicines.colSelling'), t('pages.dashboard.minStock'),
+          t('pages.medicines.colPurchasePerUnit'), t('pages.medicines.colSellingPerUnit'), t('pages.dashboard.minStock'),
           t('common.actions'),
         ]"
       >
@@ -375,6 +392,14 @@ const money = formatMoney
             <SelectInput v-model="newMed.form" :label="t('pages.medicines.dosageForm')" :options="opts(DOSAGE_FORMS).map((o) => ({ value: o.value, label: t(`pages.medicines.forms.${o.value}`) }))" />
             <TextInput v-model="newMed.strength" :label="t('pages.medicines.colStrength')" placeholder="e.g. 500mg" />
             <TextInput v-model="newMed.manufacturer" :label="t('pages.medicines.manufacturer')" placeholder="e.g. GSK" />
+            <TextInput v-model="newMed.unit" label="Smallest unit (e.g. tablet)" placeholder="tablet" />
+            <TextInput v-model="newMed.packUnit" label="Pack unit (e.g. box)" placeholder="box" />
+            <TextInput
+              v-model="newMed.unitsPerPack"
+              label="Units per pack"
+              type="number"
+              placeholder="1"
+            />
             <SelectInput
               v-model="newMed.supplierId"
               :label="t('common.supplier')"
@@ -406,8 +431,10 @@ const money = formatMoney
         <div>
           <h4 class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">{{ t('pages.medicines.sectionPricing') }}</h4>
           <FormGrid :cols="3">
-            <TextInput v-model="newMed.purchasePrice" :label="t('pages.medicines.purchasePrice')" type="number" placeholder="0" />
-            <TextInput v-model="newMed.sellingPrice" :label="t('pages.medicines.sellingPrice')" type="number" placeholder="0" required />
+            <TextInput v-model="newMed.purchasePrice" :label="t('pages.medicines.purchasePricePerUnit')" type="number" placeholder="0" />
+            <TextInput v-model="newMed.sellingPrice" :label="t('pages.medicines.sellingPricePerUnit')" type="number" placeholder="0" required />
+            <TextInput v-model="newMed.packPurchasePrice" :label="t('pages.medicines.packPurchasePrice')" type="number" placeholder="0" />
+            <TextInput v-model="newMed.packSellingPrice" :label="t('pages.medicines.packSellingPrice')" type="number" placeholder="0" />
             <TextInput v-model="newMed.taxRate" :label="t('pages.medicines.taxPercent')" type="number" placeholder="0" />
             <TextInput v-model="newMed.minStock" :label="t('pages.medicines.minimumStock')" type="number" placeholder="10" />
           </FormGrid>
@@ -445,7 +472,7 @@ const money = formatMoney
           </div>
           <div class="text-right">
             <div class="text-2xl font-bold text-slate-800 dark:text-slate-100 font-display">{{ money(viewMed.sellingPrice) }}</div>
-            <div class="text-xs text-slate-500 dark:text-slate-400">{{ t('pages.medicines.sellingPriceLabel') }}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">{{ t('pages.medicines.sellingPricePerUnit') }}</div>
           </div>
         </div>
 
@@ -458,8 +485,10 @@ const money = formatMoney
           </div>
           <div class="space-y-3">
             <DetailRow :label="t('pages.medicines.minimumStock')" :value="String(viewMed.minStock)" mono />
-            <DetailRow :label="t('pages.medicines.purchasePrice')" :value="money(viewMed.purchasePrice)" mono />
-            <DetailRow :label="t('pages.medicines.sellingPrice')" :value="money(viewMed.sellingPrice)" mono />
+            <DetailRow :label="t('pages.medicines.purchasePricePerUnit')" :value="money(viewMed.purchasePrice)" mono />
+            <DetailRow :label="t('pages.medicines.sellingPricePerUnit')" :value="money(viewMed.sellingPrice)" mono />
+            <DetailRow :label="t('pages.medicines.packPurchasePrice')" :value="viewMed.packPurchasePrice == null ? '—' : money(viewMed.packPurchasePrice)" mono />
+            <DetailRow :label="t('pages.medicines.packSellingPrice')" :value="viewMed.packSellingPrice == null ? '—' : money(viewMed.packSellingPrice)" mono />
             <DetailRow :label="t('pages.medicines.taxRate')" :value="`${viewMed.taxRate}%`" mono />
           </div>
         </div>

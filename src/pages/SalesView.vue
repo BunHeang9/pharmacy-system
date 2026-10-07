@@ -33,6 +33,8 @@ interface SaleLine {
   medicineId: string
   medicine: string
   quantity: number
+  saleUnit: 'UNIT' | 'PACK'
+  unitsPerPack: number
   unitPrice: number
   lineTotal: number
 }
@@ -202,7 +204,12 @@ const paymentMethodLabel = (m: string) => t(`pages.pos.paymentMethods.${m.toLowe
         <DataTable :headers="[t('pages.sales.colItem'), t('pages.purchases.colQty'), t('pages.sales.colPrice'), t('common.total')]">
           <TableRow v-for="(l, idx) in viewSale.lines" :key="idx">
             <TableCell>{{ l.medicine }}</TableCell>
-            <TableCell><span class="font-mono">{{ l.quantity }}</span></TableCell>
+            <TableCell>
+              <span class="font-mono">
+                {{ l.quantity }} {{ l.saleUnit === 'PACK' ? 'packs' : 'units' }}
+                <template v-if="l.saleUnit === 'PACK'">({{ l.unitsPerPack }} units each)</template>
+              </span>
+            </TableCell>
             <TableCell><span class="font-mono">{{ money(l.unitPrice) }}</span></TableCell>
             <TableCell><span class="font-mono">{{ money(l.lineTotal) }}</span></TableCell>
           </TableRow>

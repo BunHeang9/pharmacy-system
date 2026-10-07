@@ -59,7 +59,14 @@ const toast = useToast()
 const purchases = ref<Purchase[]>([])
 const suppliers = ref<Option[]>([])
 const medicines = ref<MedOption[]>([])
-
+interface MedOption extends Option {
+  strength: string
+  unit: string
+  purchasePrice: number
+  packUnit: string | null
+  unitsPerPack: number
+  packPurchasePrice: number | null
+}
 async function loadAll() {
   try {
     const [poRes, supRes, medRes] = await Promise.all([
@@ -128,7 +135,10 @@ function removeLine(i: number) {
 // ເມື່ອເລືອກຢາ ໃຫ້ຕື່ມລາຄາຊື້ຄັ້ງກ່ອນໃຫ້ອັດຕະໂນມັດ
 function onMedicineChange(l: POLine) {
   const med = medicines.value.find((m) => m.id === l.medicineId)
-  if (med && !l.unitCost) l.unitCost = med.purchasePrice
+  if (!med) return
+
+  // Use the saved pack price, or estimate it from the per-unit price.
+  l.unitCost = med.packPurchasePrice ?? med.purchasePrice * med.unitsPerPack
 }
 
 function openAdd() {
@@ -348,7 +358,9 @@ const money = formatMoney
                         @change="onMedicineChange(l)"
                       >
                         <option value="">{{ t('pages.purchases.selectMedicine') }}</option>
-                        <option v-for="m in medicines" :key="m.id" :value="m.id">{{ m.name }} {{ m.strength }}</option>
+                        <option v-for="m in medicines" :key="m.id" :value="m.id">
+  {{ m.name }} {{ m.strength }} — {{ m.unitsPerPack }} {{ m.unit }} per {{ m.packUnit || m.unit }}
+</option>
                       </select>
                     </td>
                     <td class="px-3 py-2">

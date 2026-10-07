@@ -15,7 +15,7 @@ import {
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import api from '@/api/client'
-import { useCart } from '@/stores/cart'
+import { useCart, type SaleUnit } from '@/stores/cart'
 import { useToast } from '@/stores/toast'
 import { apiErrorMessage } from '@/lib/apiError'
 import { formatMoney } from '@/utils/money'
@@ -30,7 +30,11 @@ interface Medicine {
   form: string
   strength: string
   barcode: string | null
+  unit: string | null
+  packUnit: string | null
+  unitsPerPack: number
   sellingPrice: number
+  packSellingPrice: number | null
   taxRate: number
   stock: number
   minStock: number
@@ -144,12 +148,12 @@ function onScan() {
   toast.show(t('toasts.pos.notFound'), 'error')
 }
 
-function addToCart(med: Medicine) {
+function addToCart(med: Medicine, saleUnit: SaleUnit = 'UNIT') {
   if (med.stock === 0) {
     toast.show(t('toasts.pos.outOfStock', { name: med.name }), 'warning')
     return
   }
-  cart.add(med)
+  cart.add(med, saleUnit)
   focusSearch()
 }
 
@@ -178,7 +182,7 @@ async function completeSale() {
       customerId: selectedCustomerId.value || undefined,
       discountPercent: cart.orderDiscount,
       paymentMethod: payMethod.value.toUpperCase(),
-      items: cart.items.map((i) => ({ medicineId: i.id, quantity: i.qty })),
+      items: cart.items.map((i) => ({ medicineId: i.medicineId, quantity: i.qty, saleUnit: i.saleUnit })),
     })
     lastSaleTotal.value = data.total
     showSuccess.value = true
@@ -240,13 +244,11 @@ const money = formatMoney
 
       <div class="flex-1 overflow-y-auto">
         <div class="grid grid-cols-2 xl:grid-cols-3 gap-3">
-          <button
+          <div
             v-for="med in filteredMeds"
             :key="med.id"
-            class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left transition-all group disabled:opacity-60 disabled:cursor-not-allowed"
-            :class="med.stock > 0 ? 'hover:border-blue-300 hover:shadow-md' : ''"
-            :disabled="med.stock === 0"
-            @click="addToCart(med)"
+            class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left transition-all group"
+            :class="med.stock > 0 ? 'hover:border-blue-300 hover:shadow-md' : 'opacity-60'"
           >
             <img
               v-if="med.imageUrl"
@@ -263,7 +265,7 @@ const money = formatMoney
             <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight">{{ med.name }}</div>
             <div class="text-xs text-slate-400 mt-0.5">{{ med.strength }} · {{ med.form }}</div>
             <div class="flex items-center justify-between mt-3">
-              <span class="text-base font-bold text-blue-600">{{ money(med.sellingPrice) }}</span>
+              <span class="text-xs font-semibold text-blue-600">{{ money(med.sellingPrice) }} / {{ med.unit || 'unit' }}</span>
               <span
                 class="text-xs px-2 py-0.5 rounded-full"
                 :class="med.stock < med.minStock ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'"
@@ -271,7 +273,24 @@ const money = formatMoney
                 {{ t('pages.pos.leftSuffix', { n: med.stock }) }}
               </span>
             </div>
-          </button>
+            <div class="mt-3 grid grid-cols-1 gap-2">
+              <button
+                class="w-full px-2 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs font-semibold hover:bg-blue-100 dark:hover:bg-blue-500/20 disabled:opacity-40"
+                :disabled="med.stock < 1"
+                @click="addToCart(med, 'UNIT')"
+              >
+                Add {{ med.unit || 'unit' }}
+              </button>
+              <button
+                v-if="med.packSellingPrice != null"
+                class="w-full px-2 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40"
+                :disabled="Math.floor(med.stock / Math.max(1, med.unitsPerPack || 1)) < 1"
+                @click="addToCart(med, 'PACK')"
+              >
+                Add {{ med.packUnit || 'pack' }} · {{ money(med.packSellingPrice) }}
+              </button>
+            </div>
+          </div>
         </div>
         <div v-if="filteredMeds.length === 0" class="flex items-center justify-center h-40 text-slate-400 text-sm">
           {{ t('pages.pos.noMedicinesFound') }}
@@ -297,7 +316,9 @@ const money = formatMoney
 
         <div v-for="item in cart.items" :key="item.id" class="bg-slate-50 dark:bg-slate-700/40 rounded-lg p-3">
           <div class="flex items-start justify-between mb-2">
-            <span class="text-xs font-medium text-slate-800 dark:text-slate-100 leading-tight flex-1 pr-2">{{ item.name }}</span>
+            <span class="text-xs font-medium text-slate-800 dark:text-slate-100 leading-tight flex-1 pr-2">
+              {{ item.name }} <span class="text-slate-500">({{ item.saleUnit === 'PACK' ? item.packUnit : item.unitLabel }})</span>
+            </span>
             <button
               class="text-slate-300 hover:text-red-400 transition flex-shrink-0"
               @click="cart.remove(item.id)"
@@ -316,7 +337,7 @@ const money = formatMoney
               <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 w-6 text-center">{{ item.qty }}</span>
               <button
                 class="w-6 h-6 bg-blue-500 text-white rounded-md flex items-center justify-center hover:bg-blue-600 transition disabled:opacity-40"
-                :disabled="item.qty >= item.stock"
+                :disabled="item.qty >= cart.maxQty(item)"
                 @click="cart.updateQty(item.id, 1)"
               >
                 <Plus class="w-3 h-3" />
